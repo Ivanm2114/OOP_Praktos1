@@ -1,6 +1,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <assert.h>
 
 using namespace std;
 
@@ -142,15 +143,16 @@ int ConstructorBrick::getWidth() const {
 
 bool ConstructorBrick::ConnectWith(ConstructorBrick &NewPart, coords coors) {
     coords oldBrickCoords{coors.x * -1, coors.y * -1, coors.z * -1};
-    bool flag=false;
+    bool flag = false;
     cout << "Here\n";
     if ((coors.x < 0 && coors.x + NewPart.getLength() <= 0) || coors.x > length ||
-        (coors.y < 0 && coors.y + NewPart.getWidth() <= 0) || coors.y > width) {
+        (coors.y < 0 && coors.y + NewPart.getWidth() <= 0) || coors.y > width ||
+        abs(coors.z) != 1) {
         return false;
     }
-    auto test=&NewPart;
-    for(auto & connectedBrick : connectedBricks){
-        if(&NewPart == connectedBrick) return false;
+    auto test = &NewPart;
+    for (auto &connectedBrick: connectedBricks) {
+        if (&NewPart == connectedBrick) return false;
     }
     int startRow = 0, startColumn = 0, newPartStartRow = 0, newPartStartColumn = 0;
     if (coors.x < 0) {
@@ -171,16 +173,16 @@ bool ConstructorBrick::ConnectWith(ConstructorBrick &NewPart, coords coors) {
     for (int i = startRow, ni = newPartStartRow; i < width && ni < NewPart.getWidth();
          i++, ni++) {
         for (int j = startColumn, nj = newPartStartColumn; j < length && nj < NewPart.getLength(); j++, nj++) {
-            if (IsConnectableSector(i, j,coors.z) &&
+            if (IsConnectableSector(i, j, coors.z) &&
                 NewPart.IsConnectableSector(ni, nj, oldBrickCoords.z)) {
-                connectSector(i,j,coors.z);
-                NewPart.connectSector(ni,nj,oldBrickCoords.z);
-                flag= true;
+                connectSector(i, j, coors.z);
+                NewPart.connectSector(ni, nj, oldBrickCoords.z);
+                flag = true;
 
             }
         }
     }
-    if(flag){
+    if (flag) {
         connectedBricks.push_back(&NewPart);
         connectedBricksCoords.push_back(coors);
         NewPart.connectedBricks.push_back(this);
@@ -191,30 +193,53 @@ bool ConstructorBrick::ConnectWith(ConstructorBrick &NewPart, coords coors) {
 
 
 int main() {
-    vector<vector<char>> structure;
+    vector<vector<char>> structure1, structure2, empty_structure, structure_with_empty_vectors;
     for (int i = 0; i < 2; i++) {
-        structure.push_back(vector<char>());
+        structure1.push_back(vector<char>());
         for (int j = 0; j < 3; j++) {
-            structure[i].push_back('2');
+            structure1[i].push_back('2');
         }
     }
-    ConstructorBrick brick1(structure);
-    structure.clear();
+    ConstructorBrick brick1(structure1);
     brick1.printStructure();
     for (int i = 0; i < 1; i++) {
-        structure.push_back(vector<char>());
+        structure2.push_back(vector<char>());
+        structure_with_empty_vectors.push_back(vector<char>());
         for (int j = 0; j < 2; j++) {
-            structure[i].push_back('2');
+            structure2[i].push_back('2');
         }
     }
-    ConstructorBrick brick2(structure);
-    coords brick2_coors{0, 0, 0};
+    ConstructorBrick brick2(structure2);
     brick2.printStructure();
-    bool rez = brick1.ConnectWith(brick2, brick2_coors);
-    cout << rez << '\n';
     auto brick1_blocks = brick1.getConnectedBricks();
     auto test = &brick2;
-    rez = brick1.ConnectWith(brick2, brick2_coors);
-    cout << rez << '\n';
+    ConstructorBrick brick;
+    assert(brick.setStructure(empty_structure) == false);
+    assert(brick.setStructure(structure_with_empty_vectors) == false);
+    assert(brick1.setStructure(structure1) == true);
+    coords brick2_coors{-2, 0, 1};
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.x = 3;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.x = 0;
+    brick2_coors.y = -1;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.y = 2;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.y = 0;
+    brick2_coors.z=0;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.z=-2;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.z=2;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.z=1;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == true);
+    brick2_coors.y = 1;
+    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    brick2_coors.y = 0;
+    brick.setStructure(structure2);
+    assert(brick1.ConnectWith(brick, brick2_coors) == false);
+
     return 0;
 }
