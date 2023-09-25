@@ -30,7 +30,7 @@ public:
 
     bool setStructure(const vector<vector<char>> &NewStructure);
 
-    bool ConnectWith(ConstructorBrick NewPart, coords coors);
+    bool ConnectWith(ConstructorBrick &NewPart, coords coors);
 
     int getLength() const;
 
@@ -140,13 +140,17 @@ int ConstructorBrick::getWidth() const {
     return width;
 }
 
-bool ConstructorBrick::ConnectWith(ConstructorBrick NewPart, coords coors) {
+bool ConstructorBrick::ConnectWith(ConstructorBrick &NewPart, coords coors) {
     coords oldBrickCoords{coors.x * -1, coors.y * -1, coors.z * -1};
     bool flag=false;
     cout << "Here\n";
     if ((coors.x < 0 && coors.x + NewPart.getLength() <= 0) || coors.x > length ||
         (coors.y < 0 && coors.y + NewPart.getWidth() <= 0) || coors.y > width) {
         return false;
+    }
+    auto test=&NewPart;
+    for(auto & connectedBrick : connectedBricks){
+        if(&NewPart == connectedBrick) return false;
     }
     int startRow = 0, startColumn = 0, newPartStartRow = 0, newPartStartColumn = 0;
     if (coors.x < 0) {
@@ -169,17 +173,18 @@ bool ConstructorBrick::ConnectWith(ConstructorBrick NewPart, coords coors) {
         for (int j = startColumn, nj = newPartStartColumn; j < length && nj < NewPart.getLength(); j++, nj++) {
             if (IsConnectableSector(i, j,coors.z) &&
                 NewPart.IsConnectableSector(ni, nj, oldBrickCoords.z)) {
-                connectedBricks.push_back(&NewPart);
-                connectedBricksCoords.push_back(coors);
-                NewPart.connectedBricks.push_back(this);
-
-                NewPart.connectedBricksCoords.push_back(oldBrickCoords);
                 connectSector(i,j,coors.z);
                 NewPart.connectSector(ni,nj,oldBrickCoords.z);
                 flag= true;
 
             }
         }
+    }
+    if(flag){
+        connectedBricks.push_back(&NewPart);
+        connectedBricksCoords.push_back(coors);
+        NewPart.connectedBricks.push_back(this);
+        NewPart.connectedBricksCoords.push_back(oldBrickCoords);
     }
     return flag;
 }
@@ -206,7 +211,10 @@ int main() {
     coords brick2_coors{0, 0, 0};
     brick2.printStructure();
     bool rez = brick1.ConnectWith(brick2, brick2_coors);
-    cout << rez;
+    cout << rez << '\n';
     auto brick1_blocks = brick1.getConnectedBricks();
+    auto test = &brick2;
+    rez = brick1.ConnectWith(brick2, brick2_coors);
+    cout << rez << '\n';
     return 0;
 }
