@@ -57,21 +57,20 @@ private:
     int width = 0;
 };
 
-
-auto ConstructorBrick::getStructure() const {
-    return structure;
-}
-
-
 ConstructorBrick::ConstructorBrick() {
     length = 0;
     width = 0;
 }
 
+
 ConstructorBrick::ConstructorBrick(vector<vector<char>> structure) {
     setStructure(structure);
 }
 
+
+auto ConstructorBrick::getStructure() const {
+    return structure;
+}
 
 ConstructorBrick::ConstructorBrick(ConstructorBrick &brick) {
     setStructure(brick.getStructure());
@@ -97,15 +96,15 @@ void ConstructorBrick::connectSector(int i, int j, int k) {
 }
 
 
-bool ConstructorBrick::setStructure(const vector<vector<char>> &NewStructure) {
+bool ConstructorBrick::setStructure(const vector<vector<char>> &newStructure) {
     bool flag = false;
-    for (const auto &i: NewStructure) {
+    for (const auto &i: newStructure) {
         for (int j = 0; j < i.size(); j++) {
             flag = true;
         }
     }
     if (flag) {
-        structure = NewStructure;
+        structure = newStructure;
         int maxLength = 0;
         for (int i = 0; i < structure.size(); i++) {
             if (maxLength < structure[i].size()) length = structure[i].size();
@@ -141,52 +140,50 @@ int ConstructorBrick::getWidth() const {
     return width;
 }
 
-bool ConstructorBrick::ConnectWith(ConstructorBrick &NewPart, coords coors) {
+bool ConstructorBrick::ConnectWith(ConstructorBrick &newPart, coords coors) {
     coords oldBrickCoords{coors.x * -1, coors.y * -1, coors.z * -1};
     bool flag = false;
-    cout << "Here\n";
-    if ((coors.x < 0 && coors.x + NewPart.getLength() <= 0) || coors.x > length ||
-        (coors.y < 0 && coors.y + NewPart.getWidth() <= 0) || coors.y > width ||
+    if ((coors.x < 0 && coors.x + newPart.getLength() <= 0) || coors.x > length ||
+        (coors.y < 0 && coors.y + newPart.getWidth() <= 0) || coors.y > width ||
         abs(coors.z) != 1) {
         return false;
     }
-    auto test = &NewPart;
+    auto test = &newPart;
     for (auto &connectedBrick: connectedBricks) {
-        if (&NewPart == connectedBrick) return false;
+        if (&newPart == connectedBrick) return false;
     }
     int startRow = 0, startColumn = 0, newPartStartRow = 0, newPartStartColumn = 0;
     if (coors.x < 0) {
-        startColumn = coors.x + NewPart.getLength() - 1;
-        newPartStartColumn = NewPart.length + coors.x - 1;
+        startColumn = coors.x + newPart.getLength() - 1;
+        newPartStartColumn = newPart.length + coors.x - 1;
     } else {
         startColumn = coors.x;
         newPartStartColumn = 0;
     }
     if (coors.y < 0) {
-        startRow = coors.y + NewPart.getWidth() - 1;
-        newPartStartRow = NewPart.width + coors.y - 1;
+        startRow = coors.y + newPart.getWidth() - 1;
+        newPartStartRow = newPart.width + coors.y - 1;
     } else {
         startRow = coors.y;
         newPartStartRow = 0;
     }
-    cout << "Here 2\n";
-    for (int i = startRow, ni = newPartStartRow; i < width && ni < NewPart.getWidth();
+    for (int i = startRow, ni = newPartStartRow; i < width && ni < newPart.getWidth();
          i++, ni++) {
-        for (int j = startColumn, nj = newPartStartColumn; j < length && nj < NewPart.getLength(); j++, nj++) {
+        for (int j = startColumn, nj = newPartStartColumn; j < length && nj < newPart.getLength(); j++, nj++) {
             if (IsConnectableSector(i, j, coors.z) &&
-                NewPart.IsConnectableSector(ni, nj, oldBrickCoords.z)) {
+                    newPart.IsConnectableSector(ni, nj, oldBrickCoords.z)) {
                 connectSector(i, j, coors.z);
-                NewPart.connectSector(ni, nj, oldBrickCoords.z);
+                newPart.connectSector(ni, nj, oldBrickCoords.z);
                 flag = true;
 
             }
         }
     }
     if (flag) {
-        connectedBricks.push_back(&NewPart);
+        connectedBricks.push_back(&newPart);
         connectedBricksCoords.push_back(coors);
-        NewPart.connectedBricks.push_back(this);
-        NewPart.connectedBricksCoords.push_back(oldBrickCoords);
+        newPart.connectedBricks.push_back(this);
+        newPart.connectedBricksCoords.push_back(oldBrickCoords);
     }
     return flag;
 }
@@ -214,6 +211,7 @@ int main() {
     auto brick1_blocks = brick1.getConnectedBricks();
     auto test = &brick2;
     ConstructorBrick brick;
+    ConstructorBrick copied_brick(brick1);
     assert(brick.setStructure(empty_structure) == false);
     assert(brick.setStructure(structure_with_empty_vectors) == false);
     assert(brick1.setStructure(structure1) == true);
@@ -227,19 +225,19 @@ int main() {
     brick2_coors.y = 2;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
     brick2_coors.y = 0;
-    brick2_coors.z=0;
+    brick2_coors.z = 0;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
-    brick2_coors.z=-2;
+    brick2_coors.z = -2;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
-    brick2_coors.z=2;
+    brick2_coors.z = 2;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
-    brick2_coors.z=1;
+    brick2_coors.z = 1;
     assert(brick1.ConnectWith(brick2, brick2_coors) == true);
     brick2_coors.y = 1;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
     brick2_coors.y = 0;
     brick.setStructure(structure2);
     assert(brick1.ConnectWith(brick, brick2_coors) == false);
-
+    cout << "All test have been passed\n";
     return 0;
 }
