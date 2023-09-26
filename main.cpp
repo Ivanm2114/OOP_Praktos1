@@ -148,6 +148,7 @@ bool ConstructorBrick::ConnectWith(ConstructorBrick &newPart, coords coors) {
         abs(coors.z) != 1) {
         return false;
     }
+    if(&newPart == this) return false;
     auto test = &newPart;
     for (auto &connectedBrick: connectedBricks) {
         if (&newPart == connectedBrick) return false;
@@ -232,6 +233,7 @@ int main() {
     brick2_coors.z = 2;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
     brick2_coors.z = 1;
+    assert(brick1.ConnectWith(brick1,brick2_coors) == false);
     assert(brick1.ConnectWith(brick2, brick2_coors) == true);
     brick2_coors.y = 1;
     assert(brick1.ConnectWith(brick2, brick2_coors) == false);
