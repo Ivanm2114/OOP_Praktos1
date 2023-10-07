@@ -3,6 +3,12 @@
 #include <vector>
 #include <assert.h>
 
+#define BOTH_FREE '2'
+#define ONLY_TOP_FREE '1'
+#define ONLY_BOTTOM_FREE '3'
+#define BOTH_OCCUPIED '0'
+
+
 using namespace std;
 
 struct coords {
@@ -46,9 +52,9 @@ public:
     auto getConnectedBricksCoords() const;
 
 private:
-    bool IsConnectableSector(int i, int j, int k) const;
+    bool IsConnectableSector(int x, int y, int z) const;
 
-    void connectSector(int i, int j, int k);
+    void connectSector(int x, int y, int z);
 
     vector<vector<char>> structure;
     vector<ConstructorBrick *> connectedBricks;
@@ -82,16 +88,16 @@ ConstructorBrick::ConstructorBrick(ConstructorBrick &brick) {
 }
 
 
-bool ConstructorBrick::IsConnectableSector(const int i, const int j, const int k) const {
-    if (structure[i][j] == '2' || structure[i][j] == '3' & k < 0 || structure[i][j] == '1' & k > 0) return true;
+bool ConstructorBrick::IsConnectableSector(const int x, const int y, const int z) const {
+    if (structure[x][y] == BOTH_FREE || structure[x][y] == ONLY_BOTTOM_FREE & z < 0 || structure[x][y] == ONLY_TOP_FREE & z > 0) return true;
     return false;
 }
 
-void ConstructorBrick::connectSector(int i, int j, int k) {
-    if (structure[i][j] == '2' & k > 0) structure[i][j] = '3';
-    else if (structure[i][j] == '2' & k < 0) structure[i][j] = '1';
-    else if (structure[i][j] == '3' || structure[i][j] == '1')
-        structure[i][j] = '0';
+void ConstructorBrick::connectSector(int x, int y, int z) {
+    if (structure[x][y] == BOTH_FREE & z > 0) structure[x][y] = ONLY_BOTTOM_FREE;
+    else if (structure[x][y] == BOTH_FREE & z < 0) structure[x][y] = ONLY_TOP_FREE;
+    else if (structure[x][y] == ONLY_BOTTOM_FREE || structure[x][y] == ONLY_TOP_FREE)
+        structure[x][y] = BOTH_OCCUPIED;
 
 }
 
@@ -195,7 +201,7 @@ int main() {
     for (int i = 0; i < 2; i++) {
         structure1.push_back(vector<char>());
         for (int j = 0; j < 3; j++) {
-            structure1[i].push_back('2');
+            structure1[i].push_back(BOTH_FREE);
         }
     }
     ConstructorBrick brick1(structure1);
@@ -204,7 +210,7 @@ int main() {
         structure2.push_back(vector<char>());
         structure_with_empty_vectors.push_back(vector<char>());
         for (int j = 0; j < 2; j++) {
-            structure2[i].push_back('2');
+            structure2[i].push_back(BOTH_FREE);
         }
     }
     ConstructorBrick brick2(structure2);
@@ -212,7 +218,6 @@ int main() {
     auto brick1_blocks = brick1.getConnectedBricks();
     auto test = &brick2;
     ConstructorBrick brick;
-    ConstructorBrick copied_brick(brick1);
     assert(brick.setStructure(empty_structure) == false);
     assert(brick.setStructure(structure_with_empty_vectors) == false);
     assert(brick1.setStructure(structure1) == true);
@@ -240,6 +245,8 @@ int main() {
     brick2_coors.y = 0;
     brick.setStructure(structure2);
     assert(brick1.ConnectWith(brick, brick2_coors) == false);
+    ConstructorBrick copied_brick(brick1);
+    copied_brick.printStructure();
     cout << "All test have been passed\n";
     return 0;
 }
