@@ -2,6 +2,7 @@
 #include <utility>
 #include <vector>
 #include <assert.h>
+#include <string.h>
 
 #define BOTH_FREE '2'
 #define ONLY_TOP_FREE '1'
@@ -31,13 +32,17 @@ class ConstructorBrick {
 public:
     ConstructorBrick();
 
-    ConstructorBrick(vector<vector<char>> structure);
+    ConstructorBrick(const vector<vector<char>> &structure);
 
-    ConstructorBrick(ConstructorBrick &brick);
+    ConstructorBrick(const ConstructorBrick &brick);
 
-    bool setStructure(const vector<vector<char>> &NewStructure);
+    bool canSetStructure(const vector<vector<char>> &NewStructure) const;
 
-    bool ConnectWith(ConstructorBrick &NewPart, coords coors);
+    void setStructure(const vector<vector<char>> &NewStructure);
+
+    bool canConnectWith(ConstructorBrick &NewPart, coords coors);
+
+    void connectWith(ConstructorBrick &NewPart, coords coors);
 
     int getLength() const;
 
@@ -51,8 +56,9 @@ public:
 
     auto getConnectedBricksCoords() const;
 
-private:
-    bool IsConnectableSector(int x, int y, int z) const;
+    bool isConnectableSector(int x, int y, int z) const;
+
+protected:
 
     void connectSector(int x, int y, int z);
 
@@ -63,13 +69,24 @@ private:
     int width = 0;
 };
 
+
+class FuncrionalBrick : public ConstructorBrick {
+public :
+    void setAction(const string& newAction);
+    void doAction() const;
+    bool canSetAction(const string& newAction) const;
+private:
+    string action="";
+};
+
+
 ConstructorBrick::ConstructorBrick() {
     length = 0;
     width = 0;
 }
 
 
-ConstructorBrick::ConstructorBrick(vector<vector<char>> structure) {
+ConstructorBrick::ConstructorBrick(const vector<vector<char>> &structure) {
     setStructure(structure);
 }
 
@@ -78,7 +95,7 @@ auto ConstructorBrick::getStructure() const {
     return structure;
 }
 
-ConstructorBrick::ConstructorBrick(ConstructorBrick &brick) {
+ConstructorBrick::ConstructorBrick(const ConstructorBrick &brick) {
     setStructure(brick.getStructure());
     connectedBricksCoords = brick.connectedBricksCoords;
     for (auto connectedBrick: brick.connectedBricks) {
@@ -88,8 +105,10 @@ ConstructorBrick::ConstructorBrick(ConstructorBrick &brick) {
 }
 
 
-bool ConstructorBrick::IsConnectableSector(const int x, const int y, const int z) const {
-    if (structure[x][y] == BOTH_FREE || structure[x][y] == ONLY_BOTTOM_FREE & z < 0 || structure[x][y] == ONLY_TOP_FREE & z > 0) return true;
+bool ConstructorBrick::isConnectableSector(const int x, const int y, const int z) const {
+    if (structure[x][y] == BOTH_FREE || structure[x][y] == ONLY_BOTTOM_FREE & z < 0 ||
+        structure[x][y] == ONLY_TOP_FREE & z > 0)
+        return true;
     return false;
 }
 
@@ -101,15 +120,19 @@ void ConstructorBrick::connectSector(int x, int y, int z) {
 
 }
 
-
-bool ConstructorBrick::setStructure(const vector<vector<char>> &newStructure) {
+bool ConstructorBrick::canSetStructure(const vector<vector<char>> &newStructure) const {
     bool flag = false;
     for (const auto &i: newStructure) {
         for (int j = 0; j < i.size(); j++) {
             flag = true;
         }
     }
-    if (flag) {
+    return flag;
+}
+
+
+void ConstructorBrick::setStructure(const vector<vector<char>> &newStructure) {
+    if (canSetStructure(newStructure)) {
         structure = newStructure;
         int maxLength = 0;
         for (int i = 0; i < structure.size(); i++) {
@@ -117,7 +140,9 @@ bool ConstructorBrick::setStructure(const vector<vector<char>> &newStructure) {
         }
         width = structure.size();
     }
-    return flag;
+    else{
+        cout << "This Structure can`t be setted\n";
+    }
 }
 
 void ConstructorBrick::printStructure() const {
@@ -146,15 +171,15 @@ int ConstructorBrick::getWidth() const {
     return width;
 }
 
-bool ConstructorBrick::ConnectWith(ConstructorBrick &newPart, coords coors) {
-    coords oldBrickCoords{coors.x * -1, coors.y * -1, coors.z * -1};
+bool ConstructorBrick::canConnectWith(ConstructorBrick &newPart, coords coors){
+    coords thisBrickCoords{coors.x * -1, coors.y * -1, coors.z * -1};
     bool flag = false;
     if ((coors.x < 0 && coors.x + newPart.getLength() <= 0) || coors.x > length ||
         (coors.y < 0 && coors.y + newPart.getWidth() <= 0) || coors.y > width ||
         abs(coors.z) != 1) {
         return false;
     }
-    if(&newPart == this) return false;
+    if (&newPart == this) return false;
     auto test = &newPart;
     for (auto &connectedBrick: connectedBricks) {
         if (&newPart == connectedBrick) return false;
@@ -177,24 +202,81 @@ bool ConstructorBrick::ConnectWith(ConstructorBrick &newPart, coords coors) {
     for (int i = startRow, ni = newPartStartRow; i < width && ni < newPart.getWidth();
          i++, ni++) {
         for (int j = startColumn, nj = newPartStartColumn; j < length && nj < newPart.getLength(); j++, nj++) {
-            if (IsConnectableSector(i, j, coors.z) &&
-                    newPart.IsConnectableSector(ni, nj, oldBrickCoords.z)) {
-                connectSector(i, j, coors.z);
-                newPart.connectSector(ni, nj, oldBrickCoords.z);
+            if (isConnectableSector(i, j, coors.z) &&
+                newPart.isConnectableSector(ni, nj, thisBrickCoords.z)) {
                 flag = true;
 
             }
         }
     }
-    if (flag) {
+    return flag;
+
+}
+
+void ConstructorBrick::connectWith(ConstructorBrick &newPart, coords coors) {
+    coords thisBrickCoords{coors.x * -1, coors.y * -1, coors.z * -1};
+    if(canConnectWith(newPart,coors)) {
+        int startRow = 0, startColumn = 0, newPartStartRow = 0, newPartStartColumn = 0;
+        if (coors.x < 0) {
+            startColumn = coors.x + newPart.getLength() - 1;
+            newPartStartColumn = newPart.length + coors.x - 1;
+        } else {
+            startColumn = coors.x;
+            newPartStartColumn = 0;
+        }
+        if (coors.y < 0) {
+            startRow = coors.y + newPart.getWidth() - 1;
+            newPartStartRow = newPart.width + coors.y - 1;
+        } else {
+            startRow = coors.y;
+            newPartStartRow = 0;
+        }
+        for (int i = startRow, ni = newPartStartRow; i < width && ni < newPart.getWidth();
+             i++, ni++) {
+            for (int j = startColumn, nj = newPartStartColumn; j < length && nj < newPart.getLength(); j++, nj++) {
+                if (isConnectableSector(i, j, coors.z) &&
+                    newPart.isConnectableSector(ni, nj, thisBrickCoords.z)) {
+                    connectSector(i, j, coors.z);
+                    newPart.connectSector(ni, nj, thisBrickCoords.z);
+
+                }
+            }
+        }
         connectedBricks.push_back(&newPart);
         connectedBricksCoords.push_back(coors);
         newPart.connectedBricks.push_back(this);
-        newPart.connectedBricksCoords.push_back(oldBrickCoords);
+        newPart.connectedBricksCoords.push_back(thisBrickCoords);
     }
-    return flag;
+    else{
+        cout<<"These Bricks cant be connected\n";
+    }
+
 }
 
+bool FuncrionalBrick::canSetAction(const string& newAction) const {
+    if(!newAction.empty()){
+        return true;
+    }
+    return false;
+}
+
+void FuncrionalBrick::setAction(const string& newAction) {
+    if(canSetAction(newAction)){
+        this->action = newAction;
+    }
+    else{
+        cout<<"This action can`t be setted\n";
+    }
+}
+
+void FuncrionalBrick::doAction() const {
+    if(!action.empty()){
+        cout<<action<<"\n";
+    }
+    else{
+        cout<<"Block doesn`t have an action\n";
+    }
+}
 
 int main() {
     vector<vector<char>> structure1, structure2, empty_structure, structure_with_empty_vectors;
@@ -218,33 +300,33 @@ int main() {
     auto brick1_blocks = brick1.getConnectedBricks();
     auto test = &brick2;
     ConstructorBrick brick;
-    assert(brick.setStructure(empty_structure) == false);
-    assert(brick.setStructure(structure_with_empty_vectors) == false);
-    assert(brick1.setStructure(structure1) == true);
+    assert(brick.canSetStructure(empty_structure) == false);
+    assert(brick.canSetStructure(structure_with_empty_vectors) == false);
+    assert(brick1.canSetStructure(structure1) == true);
     coords brick2_coors{-2, 0, 1};
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.x = 3;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.x = 0;
     brick2_coors.y = -1;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.y = 2;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.y = 0;
     brick2_coors.z = 0;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.z = -2;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.z = 2;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.z = 1;
-    assert(brick1.ConnectWith(brick1,brick2_coors) == false);
-    assert(brick1.ConnectWith(brick2, brick2_coors) == true);
+    assert(brick1.canConnectWith(brick1, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == true);
     brick2_coors.y = 1;
-    assert(brick1.ConnectWith(brick2, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick2, brick2_coors) == false);
     brick2_coors.y = 0;
     brick.setStructure(structure2);
-    assert(brick1.ConnectWith(brick, brick2_coors) == false);
+    assert(brick1.canConnectWith(brick, brick2_coors) == false);
     ConstructorBrick copied_brick(brick1);
     copied_brick.printStructure();
     cout << "All test have been passed\n";
