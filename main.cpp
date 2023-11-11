@@ -8,7 +8,7 @@
 #define ONLY_TOP_FREE '1'
 #define ONLY_BOTTOM_FREE '3'
 #define BOTH_OCCUPIED '0'
-
+#define zero_coords coords{0,0,0}
 
 using namespace std;
 
@@ -58,12 +58,12 @@ public:
 
     bool isConnectableSector(int x, int y, int z) const;
 
+
     virtual string getClass() const;
 
 protected:
 
     void connectSector(int x, int y, int z);
-
 
     vector<vector<char>> structure;
     vector<ConstructorBrick *> connectedBricks;
@@ -100,20 +100,27 @@ class Assembly {
 public:
     Assembly();
 
-    Assembly(ConstructorBrick &NewPart);
+    Assembly(const ConstructorBrick &newPart);
 
-    Assembly(Assembly& baseAssembly);
+    Assembly(const Assembly &baseAssembly);
 
     bool canAdd(ConstructorBrick &NewPart, coords coors) const;
 
-    void add(ConstructorBrick &NewPart, coords coors) const;
+    void add(ConstructorBrick &newPart, coords coors);
 
     auto getAllLayers() const;
 
     auto getLayer(int layer_num) const;
 
+    bool partInAssembly(ConstructorBrick &NewPart) const;
+
+    string getClass() const;
+
 private:
-    vector<ConstructorBrick> structure;
+    void recursive_add(ConstructorBrick &newPart, coords coors);
+
+    vector<ConstructorBrick *> structure;
+    vector<coords> brickCoords;
 
 };
 
@@ -141,6 +148,10 @@ FunctionalBrick::FunctionalBrick(const vector<vector<char>> &structure, string a
 
 Assembly::Assembly() = default;
 
+
+string Assembly::getClass() const {
+    return "Assembly";
+}
 
 string FunctionalBrick::getAction() const {
     return action;
@@ -219,6 +230,7 @@ void ConstructorBrick::setStructure(const vector<vector<char>> &newStructure) {
 }
 
 void ConstructorBrick::printStructure() const {
+    cout << getClass() << endl;
     for (int i = 0; i < structure.size(); i++) {
         for (int j = 0; j < structure[i].size(); j++) {
             cout << structure[i][j];
@@ -253,15 +265,18 @@ bool ConstructorBrick::canConnectWith(const ConstructorBrick &newPart, coords co
         return false;
     }
     for (int i = 0; i < connectedBricks.size(); i++) {
-        if (connectedBricksCoords[i].x <= coors.x <= connectedBricksCoords[i].x + connectedBricks[i]->length and
-            connectedBricksCoords[i].y <= coors.y <= connectedBricksCoords[i].y + connectedBricks[i]->width and
-            coors.x <= connectedBricksCoords[i].x <= coors.x + newPart.length and
-            coors.y <= connectedBricksCoords[i].y <= coors.y + newPart.width and
+        if ((((connectedBricksCoords[i].x <= coors.x and
+               coors.x <= connectedBricksCoords[i].x + connectedBricks[i]->length - 1) and
+              (connectedBricksCoords[i].y <= coors.y and
+               coors.y <= connectedBricksCoords[i].y + connectedBricks[i]->width - 1)) or
+             ((coors.x <= connectedBricksCoords[i].x and
+               connectedBricksCoords[i].x <= coors.x + newPart.length - 1) and
+              (coors.y <= connectedBricksCoords[i].y and
+               connectedBricksCoords[i].y <= coors.y + newPart.width - 1))) and
             connectedBricksCoords[i].z == coors.z)
             return false;
     }
     if (&newPart == this) return false;
-    auto test = &newPart;
     for (auto &connectedBrick: connectedBricks) {
         if (&newPart == connectedBrick) return false;
     }
@@ -333,6 +348,7 @@ void ConstructorBrick::connectWith(ConstructorBrick &newPart, coords coors) {
 
 }
 
+
 bool FunctionalBrick::canSetAction(const string &newAction) const {
     return !newAction.empty();
 }
@@ -354,16 +370,91 @@ void FunctionalBrick::doAction() const {
 }
 
 
-bool Assembly::canAdd(ConstructorBrick &NewPart, coords coors) const{
+bool Assembly::canAdd(ConstructorBrick &newPart, coords coors = zero_coords) const {
     if (structure.empty()) return structure.empty();
-    else{
-        bool flag=false;
-        for(int i=0;i<structure.size();i++){
+    else {
+        bool flag = false;
+        for (int i = 0; i < structure.size(); i++) {
+            coords rel_coords = coors;
+            rel_coords.x -= brickCoords[i].x;
+            rel_coords.y -= brickCoords[i].y;
+            rel_coords.z -= brickCoords[i].z;
+            if (structure[i]->canConnectWith(newPart, rel_coords)) {
+                flag = true;
 
+            }
+        }
+        return flag;
+    }
+}
+
+void Assembly::add(ConstructorBrick &newPart, coords coors = zero_coords) {
+    if (structure.empty()) {
+        recursive_add(newPart, coors);
+    } else if (canAdd(newPart, coors)) {
+        brickCoords.push_back(coors);
+        structure.push_back(&newPart);
+
+        for (int i = 0; i < structure.size(); i++) {
+            coords rel_coords = coors;
+            rel_coords.x -= brickCoords[i].x;
+            rel_coords.y -= brickCoords[i].y;
+            rel_coords.z -= brickCoords[i].z;
+            if (structure[i]->canConnectWith(newPart, rel_coords)) {
+                structure[i]->connectWith(newPart, rel_coords);
+            }
+        }
+    } else {
+        cout << "This brick can`t be added\n";
+    }
+}
+
+bool Assembly::partInAssembly(ConstructorBrick &newPart) const {
+    bool flag = false;
+    for (int i = 0; i < structure.size(); i++) {
+        if (structure[i] == &newPart) return true;
+    }
+    return false;
+}
+
+
+void Assembly::recursive_add(ConstructorBrick &newPart, coords coors) {
+    structure.push_back(&newPart);
+    brickCoords.push_back(coors);
+    for (int i = 0; i < newPart.getConnectedBricks().size(); i++) {
+        if (!partInAssembly(*newPart.getConnectedBricks()[i])) {
+            coords new_coors = coors;
+            new_coors.x += newPart.getConnectedBricksCoords()[i].x;
+            new_coors.y += newPart.getConnectedBricksCoords()[i].y;
+            new_coors.z += newPart.getConnectedBricksCoords()[i].z;
+            recursive_add(*(newPart.getConnectedBricks()[i]), new_coors);
         }
     }
+}
+
+auto Assembly::getAllLayers() const {
+    return structure;
+
+}
+
+auto Assembly::getLayer(int layer) const {
+    vector<ConstructorBrick *> layer_vector;
+    for (int i = 0; i < structure.size(); i++) {
+        if (brickCoords[i].z == layer) layer_vector.push_back(structure[i]);
+    }
+    return layer_vector;
+
+}
 
 
+Assembly::Assembly(
+        const ConstructorBrick &newPart) {
+    recursive_add(const_cast<ConstructorBrick &>(newPart), zero_coords);
+}
+
+Assembly::Assembly(
+        const Assembly &baseAssembly) {
+    structure = baseAssembly.getAllLayers();
 }
 
 
@@ -386,8 +477,6 @@ int main() {
     }
     ConstructorBrick brick2(structure2);
     brick2.printStructure();
-    auto brick1_blocks = brick1.getConnectedBricks();
-    auto test = &brick2;
     ConstructorBrick brick;
     FunctionalBrick funcbrick;
     assert(brick.canSetStructure(empty_structure) == false);
@@ -448,6 +537,30 @@ int main() {
     assert(brick.getClass() == "ContructorBrick");
     assert(funcbrick.getClass() == "FunctionalBrick");
     ConstructorBrick copied_brick(brick1);
+    cout << "----------------------------------------\n";
+    Assembly assembly;
+    brick1.printStructure();
+    funcbrick.printStructure();
+    assert(assembly.getAllLayers().empty() == true);
+    assert(assembly.canAdd(funcbrick) == true);
+    assembly.add(funcbrick);
+    assert(assembly.getAllLayers().size() == 3);
+    assert(assembly.getLayer(-1).size() == 1);
+    assert(assembly.canAdd(funcbrick3, coords{1, 1, -1}) == true);
+    assembly.add(funcbrick3, coords{1, 1, -1});
+    assert(assembly.getAllLayers().size() == 4);
+    assert(assembly.getLayer(-1).size() == 2);
+    Assembly copied_assembly(assembly);
+    assert(copied_assembly.getAllLayers().size() == 4);
+    Assembly assembly2(funcbrick);
+    assert(assembly2.getAllLayers().size() == 4);
+    assert(assembly.getClass() == "Assembly");
+    funcbrick.printStructure();
+    brick1.printStructure();
+    funcbrick.doAction();
+
+
+
     cout << "All test have been passed\n";
     return 0;
 }
