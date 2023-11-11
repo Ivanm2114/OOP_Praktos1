@@ -104,7 +104,7 @@ public:
 
     Assembly(const Assembly &baseAssembly);
 
-    bool canAdd(ConstructorBrick &NewPart, coords coors) const;
+    bool canAdd(const ConstructorBrick &newPart, coords coors) const;
 
     void add(ConstructorBrick &newPart, coords coors);
 
@@ -370,7 +370,7 @@ void FunctionalBrick::doAction() const {
 }
 
 
-bool Assembly::canAdd(ConstructorBrick &newPart, coords coors = zero_coords) const {
+bool Assembly::canAdd(const ConstructorBrick &newPart, coords coors = zero_coords) const {
     if (structure.empty()) return structure.empty();
     else {
         bool flag = false;
