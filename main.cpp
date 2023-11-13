@@ -112,6 +112,8 @@ public:
 
     auto getLayer(int layer_num) const;
 
+    auto getCoords() const;
+
     bool partInAssembly(ConstructorBrick &NewPart) const;
 
     string getClass() const;
@@ -437,6 +439,10 @@ auto Assembly::getAllLayers() const {
 
 }
 
+auto Assembly::getCoords() const {
+    return brickCoords;
+}
+
 auto Assembly::getLayer(int layer) const {
     vector<ConstructorBrick *> layer_vector;
     for (int i = 0; i < structure.size(); i++) {
@@ -455,6 +461,7 @@ Assembly::Assembly(
 Assembly::Assembly(
         const Assembly &baseAssembly) {
     structure = baseAssembly.getAllLayers();
+    brickCoords = baseAssembly.getCoords();
 }
 
 
@@ -552,6 +559,7 @@ int main() {
     assert(assembly.getLayer(-1).size() == 2);
     Assembly copied_assembly(assembly);
     assert(copied_assembly.getAllLayers().size() == 4);
+    assert(copied_assembly.getCoords().size() == 4);
     Assembly assembly2(funcbrick);
     assert(assembly2.getAllLayers().size() == 4);
     assert(assembly.getClass() == "Assembly");
